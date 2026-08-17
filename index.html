@@ -10,6 +10,7 @@
     />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/app.css" />
+    <script src="config.js"></script>
     <script src="js/vendor/d3.min.js"></script>
     <script src="js/vendor/d3-geo-projection.min.js"></script>
     <script src="js/vendor/topojson-client.min.js"></script>
@@ -20,6 +21,23 @@
         <header class="panel-head">
           <h1>mapgrid</h1>
           <p>Graticule maps for print</p>
+          <a
+            class="repo-link"
+            id="repo-link"
+            href="https://github.com/orestesgaolin/map-grid"
+            target="_blank"
+            rel="noopener"
+            title="Source on GitHub"
+            aria-label="Source on GitHub"
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-2.91-.88-2.91-2.9 0-.58.21-1.09.55-1.49-.06-.15-.24-.75.05-1.56 0 0 .61-.19 2 .74a5.4 5.4 0 0 1 1.44-.19c.49 0 .98.07 1.44.19 1.39-.94 2-.74 2-.74.29.81.11 1.41.05 1.56.34.4.55.9.55 1.49 0 2.03-1.14 2.7-2.93 2.9.31.27.58.79.58 1.6 0 1.15-.01 2.09-.01 2.38 0 .21.15.46.55.38A7.99 7.99 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+              />
+            </svg>
+            GitHub
+          </a>
         </header>
 
         <div class="field">
@@ -396,6 +414,12 @@
             Coastlines, rivers, lakes and places from
             <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> (public
             domain). Projections by <a href="https://d3js.org/" target="_blank" rel="noopener">d3-geo</a>.
+          </p>
+          <p>
+            <a id="repo-link-foot" href="https://github.com/orestesgaolin/map-grid" target="_blank" rel="noopener"
+              >mapgrid on GitHub</a
+            >
+            · MIT licence
           </p>
         </footer>
       </aside>

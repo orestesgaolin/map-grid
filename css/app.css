@@ -82,10 +82,34 @@ body {
   text-transform: uppercase;
 }
 
+.panel-head {
+  position: relative;
+}
+
 .panel-head p {
   margin: 2px 0 0;
   color: var(--ink-dim);
   font-size: 11.5px;
+}
+
+.repo-link {
+  position: absolute;
+  top: 14px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  color: var(--ink-dim);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.repo-link:hover {
+  color: var(--ink);
+  border-color: var(--accent);
 }
 
 details {
