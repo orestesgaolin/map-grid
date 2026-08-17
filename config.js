@@ -20,8 +20,8 @@ window.MAPGRID = {
   siteLabel: 'roszkowski.dev/map-grid',
 
   analytics: {
-    provider: 'none', // 'goatcounter' | 'plausible' | 'umami' | 'none'
-    site: '',
+    provider: 'goatcounter', // 'goatcounter' | 'plausible' | 'umami' | 'none'
+    site: 'roszkowski',
     host: '',
 
     // Skip people who ask not to be measured, through Do Not Track or the
