@@ -4,8 +4,28 @@ A static site that generates printable grids of parallels and meridians for any 
 world — in a choice of common projections, or in a tilted 3D view like an oblique satellite
 photograph — and exports them as SVG or PNG.
 
-No build step, no server code, no external requests at run time. Open `index.html` over HTTP
-and it works; push the repository to GitHub Pages and it works there.
+![](docs/main.png)
+
+<!-- Table with images -->
+
+<table>
+<tr>
+<td><img src="docs/world.png" width="300"></td>
+<td><img src="docs/earth-3d.png" width="300"></td>
+<td><img src="docs/usa.png" width="300"></td>
+</tr>
+<tr>
+<td><img src="docs/3d-sphere.png" width="300"></td>
+<td><img src="docs/blueprint.png" width="300"></td>
+<td><img src="docs/conic.png" width="300"></td>
+</tr>
+<tr>
+<td><img src="docs/connect-the-dots.png" width="300"></td>
+<td><img src="docs/stereographic.png" width="300"></td>
+<td><img src="docs/north-sea.png" width="300"></td>
+</tr>
+</table>
+
 
 ## What it does
 
@@ -83,21 +103,6 @@ Any static file server will do — the data is loaded with `fetch`, so `file://`
 npm run serve      # python3 -m http.server 8080
 open http://localhost:8080
 ```
-
-## Publishing on GitHub Pages
-
-The repository is the site. `data/` and `js/vendor/` are generated but **must be committed**,
-because Pages does not run a build:
-
-```sh
-git init && git add -A && git commit -m "feat: mapgrid"
-git remote add origin git@github.com:<user>/mapgrid.git
-git push -u origin main
-```
-
-Then in the repository settings, under Pages, serve from the `main` branch, root folder. The site
-appears at `https://<user>.github.io/mapgrid/`. All paths are relative, so a project subpath is
-fine.
 
 ## Regenerating the data
 
