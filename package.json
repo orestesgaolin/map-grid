@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "Static generator for printable graticule maps (parallels and meridians) in many projections, including a tilted 3D view.",
+  "license": "MIT",
+  "author": "Dominik Roszkowski",
+  "homepage": "https://orestesgaolin.github.io/map-grid/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orestesgaolin/map-grid.git"
+  },
   "type": "module",
   "scripts": {
     "data": "node tools/build-data.mjs",
