@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mapgrid — printable graticule maps</title>
+    <meta
+      name="description"
+      content="Generate printable grids of parallels and meridians for any part of the world, in common map projections or a tilted 3D view, and export them as SVG or PNG."
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script src="js/vendor/d3.min.js"></script>
+    <script src="js/vendor/d3-geo-projection.min.js"></script>
+    <script src="js/vendor/topojson-client.min.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="panel" id="panel">
+        <header class="panel-head">
+          <h1>mapgrid</h1>
+          <p>Graticule maps for print</p>
+        </header>
+
+        <div class="field">
+          <label for="preset">Preset</label>
+          <select id="preset" data-action="preset"></select>
+        </div>
+
+        <details open>
+          <summary>View</summary>
+
+          <div class="field">
+            <label for="mode">Frame</label>
+            <select id="mode" data-bind="view.mode">
+              <option value="world">Whole world / hemisphere</option>
+              <option value="section">Section (bounding box)</option>
+              <option value="tilt">3D tilted view</option>
+            </select>
+          </div>
+
+          <div class="field" data-show="view.mode:world|section">
+            <label for="projection">Projection</label>
+            <select id="projection" data-bind="projection.id"></select>
+          </div>
+
+          <div class="grid2" data-show="view.mode:world|tilt">
+            <div class="field">
+              <label for="lon0">Centre longitude</label>
+              <div class="pair">
+                <input type="range" min="-180" max="180" step="0.5" data-bind="projection.lon0" />
+                <input type="number" id="lon0" min="-180" max="180" step="0.5" data-bind="projection.lon0" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="lat0">Centre latitude</label>
+              <div class="pair">
+                <input type="range" min="-90" max="90" step="0.5" data-bind="projection.lat0" />
+                <input type="number" id="lat0" min="-90" max="90" step="0.5" data-bind="projection.lat0" />
+              </div>
+            </div>
+          </div>
+
+          <div class="field" data-show="view.mode:tilt">
+            <label for="height">Height above ground <span class="hint" id="height-hint"></span></label>
+            <div class="pair">
+              <input type="range" data-bind="view.heightKm" data-scale="log" data-min="30" data-max="60000" />
+              <input type="number" id="height" min="30" max="60000" step="10" data-bind="view.heightKm" />
+            </div>
+          </div>
+
+          <div class="grid2" data-show="view.mode:tilt">
+            <div class="field">
+              <label for="tilt">Tilt (deg)</label>
+              <div class="pair">
+                <input type="range" min="0" max="60" step="1" data-bind="view.tilt" />
+                <input type="number" id="tilt" min="0" max="60" step="1" data-bind="view.tilt" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="horizon">Horizon used</label>
+              <div class="pair">
+                <input type="range" min="0.2" max="1" step="0.01" data-bind="view.horizon" />
+                <input type="number" id="horizon" min="0.2" max="1" step="0.05" data-bind="view.horizon" />
+              </div>
+            </div>
+          </div>
+
+          <div class="field" data-show="view.mode:tilt|world">
+            <label for="roll">Rotation of the view (deg)</label>
+            <div class="pair">
+              <input type="range" min="-180" max="180" step="1" data-bind="projection.roll" />
+              <input type="number" id="roll" min="-180" max="180" step="1" data-bind="projection.roll" />
+            </div>
+          </div>
+
+          <div class="field" data-show="view.mode:section">
+            <label for="region">Region</label>
+            <select id="region" data-action="region"></select>
+          </div>
+
+          <div class="box" data-show="view.mode:section">
+            <p class="note">Drag the small squares on the map to resize the section.</p>
+            <div class="grid2">
+              <div class="field">
+                <label for="north">North</label>
+                <input type="number" id="north" min="-90" max="90" step="0.25" data-bind="view.north" />
+              </div>
+              <div class="field">
+                <label for="south">South</label>
+                <input type="number" id="south" min="-90" max="90" step="0.25" data-bind="view.south" />
+              </div>
+              <div class="field">
+                <label for="west">West</label>
+                <input type="number" id="west" min="-360" max="360" step="0.25" data-bind="view.west" />
+              </div>
+              <div class="field">
+                <label for="east">East</label>
+                <input type="number" id="east" min="-360" max="360" step="0.25" data-bind="view.east" />
+              </div>
+            </div>
+          </div>
+
+          <div class="grid2" data-show-projection="parallels">
+            <div class="field">
+              <label for="par1">Standard parallel 1</label>
+              <input type="number" id="par1" min="-89" max="89" step="1" data-bind="projection.parallels.0" />
+            </div>
+            <div class="field">
+              <label for="par2">Standard parallel 2</label>
+              <input type="number" id="par2" min="-89" max="89" step="1" data-bind="projection.parallels.1" />
+            </div>
+          </div>
+
+          <div class="field" data-show-projection="parallel">
+            <label for="par">Reference parallel</label>
+            <input type="number" id="par" min="-89" max="89" step="1" data-bind="projection.parallel" />
+          </div>
+
+          <div class="field">
+            <label for="zoom">Zoom <span class="hint">drag the map to move, scroll to zoom</span></label>
+            <div class="pair">
+              <input type="range" min="0.2" max="8" step="0.02" data-bind="view.zoom" />
+              <input type="number" id="zoom" min="0.05" max="200" step="0.1" data-bind="view.zoom" />
+            </div>
+          </div>
+          <button type="button" class="ghost" data-action="recentre">Reset zoom and pan</button>
+        </details>
+
+        <details open>
+          <summary>Grid</summary>
+
+          <label class="check"><input type="checkbox" data-bind="grid.auto" /> Choose the spacing automatically</label>
+
+          <div class="grid2">
+            <div class="field">
+              <label for="majorLon">Meridians every</label>
+              <select id="majorLon" data-bind="grid.majorLon" data-steps="1" data-disable-if="grid.auto"></select>
+            </div>
+            <div class="field">
+              <label for="majorLat">Parallels every</label>
+              <select id="majorLat" data-bind="grid.majorLat" data-steps="1" data-disable-if="grid.auto"></select>
+            </div>
+            <div class="field">
+              <label for="minorLon">Subdivision (lon)</label>
+              <select id="minorLon" data-bind="grid.minorLon" data-steps="1" data-disable-if="grid.auto"></select>
+            </div>
+            <div class="field">
+              <label for="minorLat">Subdivision (lat)</label>
+              <select id="minorLat" data-bind="grid.minorLat" data-steps="1" data-disable-if="grid.auto"></select>
+            </div>
+          </div>
+
+          <label class="check"><input type="checkbox" data-bind="grid.minor" /> Draw subdivision lines</label>
+
+          <div class="grid2">
+            <div class="field">
+              <label for="labels">Labels</label>
+              <select id="labels" data-bind="grid.labels">
+                <option value="frame">On the frame or the line end</option>
+                <option value="inline">On the lines only</option>
+                <option value="both">Frame and lines</option>
+                <option value="none">None</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="format">Label format</label>
+              <select id="format" data-bind="grid.format">
+                <option value="dms">45°30′ N</option>
+                <option value="decimal">45.5° N</option>
+                <option value="signed">+45.5°</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="check"><input type="checkbox" data-bind="grid.hemisphere" /> Hemisphere letters (N/S/E/W)</label>
+          <label class="check">
+            <input type="checkbox" data-bind="grid.tightFrame" /> Frame follows the map, not the page
+          </label>
+
+          <div class="grid2">
+            <div class="field">
+              <label for="frameStyle">Border</label>
+              <select id="frameStyle" data-bind="grid.frameStyle">
+                <option value="checker">Chequered band</option>
+                <option value="ticks">Tick marks</option>
+                <option value="plain">Plain line</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="band">Band width (mm)</label>
+              <input type="number" id="band" min="0.4" max="6" step="0.1" data-bind="grid.band" />
+            </div>
+            <div class="field">
+              <label for="tickLen">Tick length (mm)</label>
+              <input type="number" id="tickLen" min="0.5" max="8" step="0.1" data-bind="grid.tick" />
+            </div>
+            <div class="field">
+              <label for="labelSize">Label size (mm)</label>
+              <input type="number" id="labelSize" min="1.2" max="8" step="0.1" data-bind="grid.labelSize" />
+            </div>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Layers</summary>
+
+          <div class="field">
+            <label for="detail">Coastline detail</label>
+            <select id="detail" data-bind="detail"></select>
+          </div>
+
+          <div class="checks">
+            <label class="check"><input type="checkbox" data-bind="layers.land" /> Land silhouette</label>
+            <label class="check"><input type="checkbox" data-bind="layers.coast" /> Coastline</label>
+            <label class="check"><input type="checkbox" data-bind="layers.ocean" /> Sea fill</label>
+            <label class="check" data-show-truthy="layers.ocean">
+              <input type="checkbox" data-bind="layers.seaCutout" /> Sea cut around land
+            </label>
+            <label class="check"><input type="checkbox" data-bind="layers.rivers" /> Rivers</label>
+            <label class="check"><input type="checkbox" data-bind="layers.lakes" /> Lakes</label>
+            <label class="check"><input type="checkbox" data-bind="layers.borders" /> Country borders</label>
+            <label class="check"><input type="checkbox" data-bind="layers.cities" /> Cities</label>
+            <label class="check"><input type="checkbox" data-bind="layers.dots" /> Connect the dots</label>
+            <label class="check"><input type="checkbox" data-bind="layers.sphere" /> Globe outline</label>
+            <label class="check"><input type="checkbox" data-bind="layers.frame" /> Frame</label>
+            <label class="check"><input type="checkbox" data-bind="layers.scalebar" /> Scale bar</label>
+          </div>
+
+          <div class="box" data-show-truthy="layers.cities">
+            <div class="field">
+              <label for="minPop">Smallest city <span class="hint" id="pop-hint"></span></label>
+              <div class="pair">
+                <input type="range" data-bind="cities.minPop" data-scale="log" data-min="100000" data-max="40000000" />
+                <input type="number" id="minPop" min="0" max="40000000" step="10000" data-bind="cities.minPop" />
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label for="cityMax">Most cities shown</label>
+                <input type="number" id="cityMax" min="1" max="400" step="1" data-bind="cities.max" />
+              </div>
+              <div class="field">
+                <label for="cityDot">Dot size (mm)</label>
+                <input type="number" id="cityDot" min="0.3" max="4" step="0.1" data-bind="cities.dot" />
+              </div>
+            </div>
+            <label class="check"><input type="checkbox" data-bind="cities.labels" /> City names</label>
+            <label class="check"><input type="checkbox" data-bind="cities.capitalsOnly" /> Capitals only</label>
+          </div>
+
+          <div class="box" data-show-truthy="layers.dots">
+            <div class="field">
+              <label for="dotSpacing">
+                Dot spacing <span class="hint" id="dots-hint">wider spacing, fewer dots</span>
+              </label>
+              <div class="pair">
+                <input type="range" min="1.5" max="25" step="0.5" data-bind="dots.spacing" />
+                <input type="number" id="dotSpacing" min="0.5" max="60" step="0.5" data-bind="dots.spacing" />
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label for="dotSize">Dot size (mm)</label>
+                <input type="number" id="dotSize" min="0.2" max="4" step="0.1" data-bind="dots.size" />
+              </div>
+              <div class="field">
+                <label for="dotMinIsland">Skip islands under</label>
+                <input type="number" id="dotMinIsland" min="0" max="20" step="0.5" data-bind="dots.minIsland" />
+              </div>
+            </div>
+            <label class="check"><input type="checkbox" data-bind="dots.numbers" /> Number the dots</label>
+            <div class="field" data-show-truthy="dots.numbers">
+              <label for="dotLabelSize">Number size (mm)</label>
+              <input type="number" id="dotLabelSize" min="0.8" max="6" step="0.1" data-bind="dots.labelSize" />
+            </div>
+            <p class="note">
+              Islands shorter than this many dot spacings are left out. Numbering restarts on every island.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Page and style</summary>
+
+          <div class="grid2">
+            <div class="field">
+              <label for="pageSize">Page</label>
+              <select id="pageSize" data-bind="page.size"></select>
+            </div>
+            <div class="field">
+              <label for="orientation">Orientation</label>
+              <select id="orientation" data-bind="page.orientation">
+                <option value="landscape">Landscape</option>
+                <option value="portrait">Portrait</option>
+              </select>
+            </div>
+            <div class="field" data-show="page.size:Custom">
+              <label for="pageW">Width (mm)</label>
+              <input type="number" id="pageW" min="40" max="2000" step="1" data-bind="page.width" />
+            </div>
+            <div class="field" data-show="page.size:Custom">
+              <label for="pageH">Height (mm)</label>
+              <input type="number" id="pageH" min="40" max="2000" step="1" data-bind="page.height" />
+            </div>
+            <div class="field">
+              <label for="margin">Margin (mm)</label>
+              <input type="number" id="margin" min="2" max="60" step="1" data-bind="page.margin" />
+            </div>
+            <div class="field">
+              <label for="lineScale">Line weight</label>
+              <input type="number" id="lineScale" min="0.2" max="4" step="0.1" data-bind="style.lineScale" />
+            </div>
+            <div class="field">
+              <label for="theme">Colours</label>
+              <select id="theme" data-bind="style.theme" data-action="theme"></select>
+            </div>
+            <div class="field">
+              <label for="font">Type</label>
+              <select id="font" data-bind="style.font"></select>
+            </div>
+          </div>
+
+          <label class="check"><input type="checkbox" data-bind="title.show" /> Title block</label>
+          <div class="box" data-show-truthy="title.show">
+            <div class="field">
+              <label for="titleText">Title</label>
+              <input type="text" id="titleText" data-bind="title.text" placeholder="Graticule" />
+            </div>
+            <div class="field">
+              <label for="subtitleText">Note (right side)</label>
+              <input type="text" id="subtitleText" data-bind="title.subtitle" placeholder="" />
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" data-bind="title.credit" /> Footer line with projection, scale and data credit</label>
+
+          <details class="sub">
+            <summary>Individual colours</summary>
+            <div class="colours" id="colours"></div>
+          </details>
+        </details>
+
+        <details>
+          <summary>Export</summary>
+          <div class="grid2">
+            <div class="field">
+              <label for="dpi">PNG resolution</label>
+              <select id="dpi">
+                <option value="96">96 dpi (screen)</option>
+                <option value="150">150 dpi</option>
+                <option value="300" selected>300 dpi (print)</option>
+                <option value="600">600 dpi (fine print)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Pixel size</label>
+              <output id="px-size" class="output">—</output>
+            </div>
+          </div>
+          <div class="buttons">
+            <button type="button" data-action="png">Export PNG</button>
+            <button type="button" data-action="svg">Export SVG</button>
+          </div>
+          <div class="buttons">
+            <button type="button" class="ghost" data-action="link">Copy link to this map</button>
+            <button type="button" class="ghost" data-action="reset">Reset all</button>
+          </div>
+          <p class="note">
+            SVG keeps the page size in millimetres, so it prints at the size shown. PNG is rasterised at the chosen
+            resolution.
+          </p>
+        </details>
+
+        <footer class="panel-foot">
+          <p>
+            Coastlines, rivers, lakes and places from
+            <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> (public
+            domain). Projections by <a href="https://d3js.org/" target="_blank" rel="noopener">d3-geo</a>.
+          </p>
+        </footer>
+      </aside>
+
+      <main class="stage">
+        <div class="stage-bar">
+          <span id="status" class="status">starting…</span>
+          <span class="spacer"></span>
+          <span id="readout" class="readout"></span>
+        </div>
+        <div class="stage-area" id="stage"></div>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

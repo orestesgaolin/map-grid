@@ -1,0 +1,425 @@
+/* Interface chrome only. Everything inside the map SVG carries its own
+   presentation attributes so that exported files need no stylesheet. */
+
+:root {
+  --bg: #14161a;
+  --panel: #1b1e24;
+  --panel-2: #23272f;
+  --line: #32373f;
+  --ink: #e7eaee;
+  --ink-dim: #9aa3ae;
+  --accent: #6aa9cf;
+  --accent-ink: #0d1116;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #eceef1;
+    --panel: #f7f8fa;
+    --panel-2: #ffffff;
+    --line: #d3d8de;
+    --ink: #1d2126;
+    --ink-dim: #5f6874;
+    --accent: #2b6f9e;
+    --accent-ink: #ffffff;
+    color-scheme: light;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Layout rules below set display on the same elements the panel hides, so the
+   hidden state needs to win. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 332px 1fr;
+  height: 100%;
+}
+
+/* --- panel ---------------------------------------------------------------- */
+
+.panel {
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 0 14px 24px;
+}
+
+.panel-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--panel);
+  padding: 14px 0 10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+
+.panel-head h1 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.panel-head p {
+  margin: 2px 0 0;
+  color: var(--ink-dim);
+  font-size: 11.5px;
+}
+
+details {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  background: var(--panel-2);
+}
+
+details > summary {
+  cursor: pointer;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 12px;
+  color: var(--accent);
+}
+
+details[open] > summary::before {
+  content: "▾";
+}
+
+details > *:not(summary) {
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+details > *:last-child {
+  margin-bottom: 10px;
+}
+
+details.sub {
+  margin: 8px 0 0;
+  background: transparent;
+}
+
+.field {
+  margin: 8px 0;
+}
+
+.field > label,
+.check {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+  margin-bottom: 3px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 5px 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 8px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 8px;
+}
+
+.box {
+  border: 1px dashed var(--line);
+  border-radius: 5px;
+  padding: 4px 8px 8px;
+  margin: 8px 0;
+}
+
+.hint {
+  color: var(--accent);
+  font-size: 10.5px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+output.output {
+  width: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+}
+
+output.output {
+  display: block;
+  color: var(--ink-dim);
+}
+
+select:disabled,
+input:disabled {
+  opacity: 0.45;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 62px;
+  gap: 6px;
+  align-items: center;
+}
+
+.buttons {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+button {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink);
+  font-weight: 400;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}
+
+.note,
+.panel-foot p {
+  color: var(--ink-dim);
+  font-size: 11px;
+  margin: 6px 0 0;
+}
+
+.panel-foot a {
+  color: var(--accent);
+}
+
+.colours {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  margin-top: 6px;
+}
+
+.colours label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.colours input[type="color"] {
+  width: 34px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: none;
+}
+
+/* --- stage ---------------------------------------------------------------- */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stage-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 11.5px;
+  color: var(--ink-dim);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.status.busy {
+  color: var(--accent);
+}
+
+.status.error {
+  color: #e07a5f;
+}
+
+.readout {
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-area {
+  flex: 1;
+  min-height: 0;
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(45deg, rgba(127, 127, 127, 0.09) 25%, transparent 25% 75%, rgba(127, 127, 127, 0.09) 75%) 0 0 /
+      18px 18px,
+    linear-gradient(45deg, rgba(127, 127, 127, 0.09) 25%, transparent 25% 75%, rgba(127, 127, 127, 0.09) 75%) 9px 9px /
+      18px 18px;
+}
+
+.stage-area svg {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  width: auto;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.38);
+  touch-action: none;
+  cursor: grab;
+}
+
+.stage-area.dragging svg {
+  cursor: grabbing;
+}
+
+/* Section drag handles. They live inside the map SVG but are interface only:
+   export removes them and printing hides them. */
+[data-handle] {
+  cursor: move;
+}
+
+[data-handle="n"],
+[data-handle="s"] {
+  cursor: ns-resize;
+}
+
+[data-handle="e"],
+[data-handle="w"] {
+  cursor: ew-resize;
+}
+
+[data-handle="nw"],
+[data-handle="se"] {
+  cursor: nwse-resize;
+}
+
+[data-handle="ne"],
+[data-handle="sw"] {
+  cursor: nesw-resize;
+}
+
+@media print {
+  .panel,
+  .stage-bar,
+  .toast,
+  [data-ui] {
+    display: none;
+  }
+
+  .app {
+    display: block;
+  }
+
+  .stage-area {
+    padding: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  .stage-area svg {
+    box-shadow: none;
+    max-width: none;
+    max-height: none;
+  }
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 8px 14px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 45vh) 1fr;
+  }
+
+  .panel {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}
