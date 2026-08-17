@@ -8,6 +8,7 @@ import {presetPatch, regionPatch} from './presets.js';
 import {exportPNG, exportSVG, stamp} from './exporter.js';
 import {themeColours} from './style.js';
 import {horizonRadiusKm, HEIGHT_LIMITS, sectionBox} from './projections.js';
+import {initAnalytics, track} from './analytics.js';
 
 const panel = document.getElementById('panel');
 const stage = document.getElementById('stage');
@@ -350,6 +351,7 @@ async function onAction(name, value, element) {
       merge(state, patch);
       if (patch.style?.theme) merge(state.style, themeColours(patch.style.theme));
       element.value = '';
+      track('preset', {preset: value});
       schedule();
       break;
     }
@@ -378,6 +380,7 @@ async function onAction(name, value, element) {
     case 'svg':
       if (!currentSVG) return;
       exportSVG(currentSVG, `${baseName()}.svg`);
+      track('export/svg', {projection: currentInfo?.def?.id, frame: state.view.mode, detail: state.detail});
       toast('SVG saved');
       break;
     case 'png':
@@ -390,6 +393,7 @@ async function onAction(name, value, element) {
           background: state.style.paper,
         });
         status('', 'ready');
+        track('export/png', {projection: currentInfo?.def?.id, frame: state.view.mode, dpi: dpi()});
         toast(`PNG saved, ${pxWidth}×${pxHeight} px`);
       } catch (err) {
         status('error', err.message);
@@ -424,6 +428,9 @@ bindControls(panel, state, {
   },
   onAction,
 });
+for (const link of document.querySelectorAll('#repo-link, #repo-link-foot')) {
+  if (globalThis.MAPGRID?.repo) link.href = globalThis.MAPGRID.repo;
+}
 document.getElementById('dpi').addEventListener('change', updateReadout);
 window.addEventListener('resize', () => updateReadout());
 window.addEventListener('hashchange', () => {
@@ -436,4 +443,5 @@ window.addEventListener('hashchange', () => {
 
 refreshControls(panel, state);
 status('busy', 'loading map data…');
+initAnalytics();
 schedule();

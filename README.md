@@ -4,6 +4,10 @@ A static site that generates printable grids of parallels and meridians for any 
 world — in a choice of common projections, or in a tilted 3D view like an oblique satellite
 photograph — and exports them as SVG or PNG.
 
+**[Open the app](https://orestesgaolin.github.io/map-grid/)** ·
+[source](https://github.com/orestesgaolin/map-grid) ·
+[MIT licence](LICENSE)
+
 ![](docs/main.png)
 
 <!-- Table with images -->
@@ -129,7 +133,9 @@ checks that land measures about 3.6 steradians. Without that, the three inverted
 
 ```
 index.html            markup and the whole control panel
+config.js             repository link and the analytics switch
 css/app.css           interface only; nothing inside the map SVG depends on it
+js/analytics.js       optional cookieless analytics, inert until configured
 js/state.js           defaults, dotted-path access, URL hash
 js/projections.js     projection registry, aiming, fitting, clipping, tilt limits
 js/geo.js             graticule construction, tracing, border ticks, label formats
@@ -157,7 +163,40 @@ is mutated in place, and the SVG that goes on screen is byte-for-byte what gets 
 - Fonts are named generically (Helvetica/Arial, Georgia/Times, system monospace) so exported
   files render anywhere; no font is embedded.
 
-## Data licence
+## Analytics
+
+Off by default: a plain checkout makes no third-party request. GitHub Pages itself reports
+nothing about visitors — the repository's Insights → Traffic panel counts views of the *repository
+page* and clones, not hits on the published site — so measuring visits needs a script.
+
+Three cookieless providers are supported. Name one in `config.js` and it is loaded; leave
+`provider: 'none'` and `js/analytics.js` does nothing.
+
+| Provider | Cost | Notes |
+| --- | --- | --- |
+| [GoatCounter](https://www.goatcounter.com) | free for personal use | open source, no cookies, no personal data, ~3 kB. `site: 'yourcode'` for `yourcode.goatcounter.com` |
+| [Plausible](https://plausible.io) | paid, or self-hosted | `site` is the domain you registered, `host` an optional self-hosted origin |
+| [Umami](https://umami.is) | self-hosted | `site` is the website id, `host` the origin serving `script.js` |
+
+```js
+// config.js
+analytics: {provider: 'goatcounter', site: 'mapgrid', host: '', respectPrivacySignals: true, allowLocalhost: false},
+```
+
+Google Analytics is deliberately not wired in: GA4 writes `_ga` cookies by default, and its
+cookieless mode gives up most of what it is for.
+[Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/) is free and cookieless too,
+but it has no custom events — if you prefer it, paste its beacon `<script>` into `index.html` and
+leave `provider: 'none'`.
+
+What gets sent, beyond the automatic page view: `export/svg`, `export/png` and `preset`, each with
+the projection, frame type and resolution as properties. Never any map content, coordinates or
+identifier. Requests are skipped for visitors sending Do Not Track or Global Privacy Control, and
+on localhost.
+
+## Licence
+
+[MIT](LICENSE) © Dominik Roszkowski.
 
 Natural Earth data is in the public domain. d3 and TopoJSON are ISC/BSD licensed; their notices
 are inside the bundles in `js/vendor/`.
