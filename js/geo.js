@@ -7,6 +7,7 @@
 // leaves the map. That is what turns into a border tick.
 
 import {latLimit, visibleBox} from './projections.js';
+import {t} from './i18n.js';
 
 const DEG = Math.PI / 180;
 
@@ -452,7 +453,9 @@ function trimNumber(v, digits) {
 export function formatCoord(value, axis, style = 'dms', hemisphere = true) {
   const raw = axis === 'lon' ? normaliseLon(value) : value;
   const abs = Math.abs(raw);
-  const letter = axis === 'lon' ? (raw > 0 ? 'E' : 'W') : raw > 0 ? 'N' : 'S';
+  // East and West differ by language: O for Ost/Ouest/Oeste.
+  const letter =
+    axis === 'lon' ? (raw > 0 ? t('hemi.e') : t('hemi.w')) : raw > 0 ? t('hemi.n') : t('hemi.s');
   const suffix = hemisphere && abs > 1e-9 && Math.abs(abs - 180) > 1e-9 ? ' ' + letter : '';
 
   if (style === 'signed') return trimNumber(raw, 4) + '°';

@@ -16,7 +16,7 @@ const DEFS = [
   {id: 'mercator', label: 'Mercator', group: 'Cylindrical', fn: 'geoMercator', aim: 'cylindrical', latLimit: 85.0511287798066},
   {id: 'transverseMercator', label: 'Transverse Mercator', group: 'Cylindrical', fn: 'geoTransverseMercator', aim: 'cylindrical', latLimit: 89.9, transverse: true},
   {id: 'miller', label: 'Miller cylindrical', group: 'Cylindrical', fn: 'geoMiller', aim: 'cylindrical'},
-  {id: 'cylindricalEqualArea', label: 'Cylindrical equal area (Lambert / Gall–Peters)', group: 'Cylindrical', fn: 'geoCylindricalEqualArea', aim: 'cylindrical', parallel: true},
+  {id: 'cylindricalEqualArea', label: 'Cylindrical equal area (Gall–Peters)', group: 'Cylindrical', fn: 'geoCylindricalEqualArea', aim: 'cylindrical', parallel: true},
 
   // Pseudocylindrical and other whole-world frames
   {id: 'robinson', label: 'Robinson', group: 'Whole world', fn: 'geoRobinson', aim: 'cylindrical'},

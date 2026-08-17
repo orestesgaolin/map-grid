@@ -8,7 +8,9 @@ import {presetPatch, regionPatch} from './presets.js';
 import {exportPNG, exportSVG, stamp} from './exporter.js';
 import {themeColours} from './style.js';
 import {horizonRadiusKm, HEIGHT_LIMITS, sectionBox} from './projections.js';
+import {rectRange} from './geo.js';
 import {initAnalytics, track} from './analytics.js';
+import {applyTranslations, detectLanguage, formatNumber, setLanguage, t} from './i18n.js';
 
 const panel = document.getElementById('panel');
 const stage = document.getElementById('stage');
@@ -30,8 +32,8 @@ function status(kind, message) {
 
 setProgressHandler((message) => {
   loading += message ? 1 : -1;
-  if (loading > 0) status('busy', 'loading map data…');
-  else status('', 'ready');
+  if (loading > 0) status('busy', t('status.loading'));
+  else status('', t('status.ready'));
 });
 
 function needs() {
@@ -74,7 +76,7 @@ async function draw() {
     out = render(state, data);
   } catch (err) {
     console.error(err);
-    status('error', `cannot draw this view: ${err.message}`);
+    status('error', t('status.drawFail', {message: err.message}));
     return;
   }
 
@@ -82,7 +84,7 @@ async function draw() {
   currentInfo = out.info;
   attachInteraction(out.svg);
   stage.replaceChildren(out.svg);
-  if (loading === 0 && !statusNode.classList.contains('error')) status('', 'ready');
+  if (loading === 0 && !statusNode.classList.contains('error')) status('', t('status.ready'));
   updateReadout();
   refreshControls(panel, state);
   updateHints();
@@ -106,10 +108,10 @@ function updateReadout() {
   const parts = [
     currentInfo?.def?.label,
     `${Number(page.width.toFixed(1))}×${Number(page.height.toFixed(1))} mm`,
-    currentInfo?.scale ? `1:${formatScale(currentInfo.scale.denominator)} at the centre` : null,
-    `${currentInfo?.ticks ?? 0} border ticks`,
-    currentInfo?.dots != null ? `${currentInfo.dots} dots` : null,
-    `${pw}×${ph} px at ${dpi()} dpi`,
+    currentInfo?.scale ? t('read.centre', {scale: formatScale(currentInfo.scale.denominator)}) : null,
+    t('read.ticks', {n: currentInfo?.ticks ?? 0}),
+    currentInfo?.dots != null ? t('read.dots', {n: currentInfo.dots}) : null,
+    t('read.px', {w: pw, h: ph, dpi: dpi()}),
   ].filter(Boolean);
   readout.textContent = parts.join('  ·  ');
   document.getElementById('px-size').textContent = `${pw} × ${ph} px`;
@@ -122,17 +124,16 @@ function updateHints() {
     // With tilt, the view is cut before the horizon to keep the perspective
     // finite; report what is really covered.
     const shown = currentInfo?.clipAngle != null ? (currentInfo.clipAngle / 180) * Math.PI * 6371.0088 : horizon;
-    const km = Math.round(Math.min(shown, horizon)).toLocaleString('en-US');
-    heightHint.textContent = `${km} km to the edge`;
+    heightHint.textContent = t('hint.edge', {km: formatNumber(Math.round(Math.min(shown, horizon)))});
   }
   const frameHint = document.getElementById('frame-hint');
   if (frameHint) {
     // Say so when the chequered band cannot be drawn on this frame.
     const fell = currentInfo?.frameStyleAsked === 'checker' && currentInfo?.frameStyle !== 'checker';
-    frameHint.textContent = fell ? 'no graticule on the frame here — using ticks' : '';
+    frameHint.textContent = fell ? t('hint.frameFallback') : '';
   }
   const popHint = document.getElementById('pop-hint');
-  if (popHint) popHint.textContent = `${Math.round(state.cities.minPop).toLocaleString('en-US')} people`;
+  if (popHint) popHint.textContent = t('cities.people', {n: formatNumber(Math.round(state.cities.minPop))});
 }
 
 let hashTimer = null;
@@ -201,7 +202,10 @@ function startHandleDrag(svg, event, handle) {
     if (overlay) overlay.replaceWith(sectionOverlay(info, pending));
     status(
       'busy',
-      `section ${(pending.east - pending.west).toFixed(2)}° × ${(pending.north - pending.south).toFixed(2)}°`
+      t('status.section', {
+        lon: (pending.east - pending.west).toFixed(2),
+        lat: (pending.north - pending.south).toFixed(2),
+      })
     );
   };
 
@@ -210,7 +214,7 @@ function startHandleDrag(svg, event, handle) {
     window.removeEventListener('pointerup', done);
     window.removeEventListener('pointercancel', done);
     stage.classList.remove('dragging');
-    status('', 'ready');
+    status('', t('status.ready'));
     const west = clampLon(pending.west);
     state.view.west = Number(west.toFixed(4));
     state.view.east = Number((west + (pending.east - pending.west)).toFixed(4));
@@ -244,9 +248,18 @@ function attachInteraction(svg) {
     interactive = true;
 
     const move = (e) => {
-      const dx = (e.clientX - start.x) * factor;
-      const dy = (e.clientY - start.y) * factor;
+      let dx = (e.clientX - start.x) * factor;
+      let dy = (e.clientY - start.y) * factor;
       if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) return;
+      // Dragging up or down on a flat world map is the moment to hand over to a
+      // section. The drag is rebased on the new box so the motion stays smooth.
+      if (Math.abs(dy) > 1 && worldToSection({requireRoom: true})) {
+        start.x = e.clientX;
+        start.y = e.clientY;
+        start.view = {...state.view};
+        dx = 0;
+        dy = 0;
+      }
       applyDrag(start, dx, dy);
       schedule();
     };
@@ -269,6 +282,7 @@ function attachInteraction(svg) {
       event.preventDefault();
       const factor = Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.05 : 0.0015));
       const step = Math.min(Math.max(factor, 0.5), 2);
+      if (state.view.mode === 'world' && step > 1) worldToSection();
       if (state.view.mode === 'section') {
         zoomSection(step, event, svg);
       } else if (state.view.mode === 'tilt') {
@@ -283,6 +297,41 @@ function attachInteraction(svg) {
     },
     {passive: false}
   );
+}
+
+/**
+ * Turns the current whole-world view into the section it is already showing.
+ *
+ * A cylindrical or conic frame is aimed by longitude only — latitude has no
+ * meaning for it, so dragging up and down does nothing and a zoomed-in world map
+ * cannot be moved. Rather than inventing a pan offset for those projections, the
+ * view becomes a real section box covering exactly what is on screen; from there
+ * both axes move freely and the box is what gets fitted. Azimuthal and tilted
+ * frames aim by latitude as well, so they are left alone.
+ *
+ * `requireRoom` is for drag: a view that already shows the whole world has
+ * nothing above 90 N to reveal, so the mode is left as it is rather than
+ * switching for no gain. Zooming in passes false, because the box is about to
+ * become smaller than the world anyway.
+ */
+function worldToSection({requireRoom = false} = {}) {
+  if (state.view.mode !== 'world') return false;
+  const info = currentInfo;
+  if (!info?.projection || !info.def || info.def.aim === 'azimuthal' || info.def.aim === 'perspective') return false;
+  const box = rectRange(info.projection, info.rect, state.projection.lon0);
+  if (!box) return false;
+  if (requireRoom && (state.view.zoom || 1) <= 1.02 && box.north - box.south > 179) return false;
+
+  state.view.mode = 'section';
+  state.view.west = Number(box.west.toFixed(4));
+  state.view.east = Number(box.east.toFixed(4));
+  state.view.south = Number(Math.max(box.south, -90).toFixed(4));
+  state.view.north = Number(Math.min(box.north, 90).toFixed(4));
+  state.view.zoom = 1;
+  state.view.panX = 0;
+  state.view.panY = 0;
+  toast(t('toast.section'));
+  return true;
 }
 
 function applyDrag(start, dx, dy) {
@@ -369,6 +418,15 @@ async function onAction(name, value, element) {
       schedule();
       break;
     }
+    case 'language':
+      setLanguage(value);
+      applyTranslations();
+      // The selects hold translated text, so they are rebuilt from scratch.
+      buildControls(panel);
+      refreshControls(panel, state);
+      track('language', {language: value});
+      schedule();
+      break;
     case 'theme':
       merge(state.style, themeColours(state.style.theme));
       schedule();
@@ -376,7 +434,7 @@ async function onAction(name, value, element) {
     case 'reset-grid':
       merge(state.grid, defaultState().grid);
       schedule();
-      toast('grid reset');
+      toast(t('toast.gridReset'));
       break;
     case 'recentre':
       state.view.zoom = 1;
@@ -392,31 +450,31 @@ async function onAction(name, value, element) {
       if (!currentSVG) return;
       exportSVG(currentSVG, `${baseName()}.svg`);
       track('export/svg', {projection: currentInfo?.def?.id, frame: state.view.mode, detail: state.detail});
-      toast('SVG saved');
+      toast(t('toast.svg'));
       break;
     case 'png':
       if (!currentSVG) return;
       try {
-        status('busy', 'rasterising…');
+        status('busy', t('status.raster'));
         const {pxWidth, pxHeight} = await exportPNG(currentSVG, {
           dpi: dpi(),
           filename: `${baseName()}.png`,
           background: state.style.paper,
         });
-        status('', 'ready');
+        status('', t('status.ready'));
         track('export/png', {projection: currentInfo?.def?.id, frame: state.view.mode, dpi: dpi()});
-        toast(`PNG saved, ${pxWidth}×${pxHeight} px`);
+        toast(t('toast.png', {w: pxWidth, h: pxHeight}));
       } catch (err) {
         status('error', err.message);
-        toast(`PNG export failed: ${err.message}`, 5000);
+        toast(t('toast.pngFail', {message: err.message}), 5000);
       }
       break;
     case 'link':
       try {
         await navigator.clipboard.writeText(location.href);
-        toast('link copied');
+        toast(t('toast.link'));
       } catch {
-        toast('copy failed — the link is in the address bar');
+        toast(t('toast.linkFail'));
       }
       break;
     default:
@@ -426,6 +484,8 @@ async function onAction(name, value, element) {
 
 // --- start -------------------------------------------------------------------
 
+setLanguage(detectLanguage());
+applyTranslations();
 buildControls(panel);
 bindControls(panel, state, {
   onChange: (path) => {
@@ -453,6 +513,6 @@ window.addEventListener('hashchange', () => {
 });
 
 refreshControls(panel, state);
-status('busy', 'loading map data…');
+status('busy', t('status.loading'));
 initAnalytics();
 schedule();

@@ -17,6 +17,7 @@ import {projections, projectionDef} from './projections.js';
 import {THEMES, FONTS, COLOUR_KEYS} from './style.js';
 import {DETAILS} from './datasets.js';
 import {PRESETS, REGIONS} from './presets.js';
+import {LANGUAGES, language, t, tf} from './i18n.js';
 
 /** Number of steps on a logarithmic slider track. */
 const LOG_TRACK = 1000;
@@ -24,23 +25,6 @@ const LOG_TRACK = 1000;
 const STEP_LADDER = [
   90, 60, 45, 30, 20, 15, 10, 5, 2, 1, 0.5, 0.25, 1 / 6, 0.1, 1 / 12, 0.05, 1 / 30, 0.02, 1 / 60, 1 / 120, 1 / 300,
 ];
-
-const COLOUR_LABELS = {
-  paper: 'Paper',
-  ocean: 'Sea',
-  land: 'Land',
-  coast: 'Coastline',
-  border: 'Borders',
-  water: 'Lake fill',
-  waterLine: 'Lake outline',
-  river: 'Rivers',
-  gridMajor: 'Graticule',
-  gridMinor: 'Subdivisions',
-  frame: 'Frame',
-  text: 'Labels',
-  city: 'City dots',
-  cityText: 'City names',
-};
 
 export function stepLabel(v) {
   if (v >= 1) return `${Number(v.toFixed(4))}°`;
@@ -78,38 +62,49 @@ export function buildControls(root) {
       if (def.tiltOnly) continue;
       if (!groups.has(def.group)) {
         const g = document.createElement('optgroup');
-        g.label = def.group;
+        g.label = tf(`group.${def.group}`, def.group);
         groups.set(def.group, g);
         projectionSelect.appendChild(g);
       }
-      groups.get(def.group).appendChild(option(def.id, def.label));
+      groups.get(def.group).appendChild(option(def.id, tf(`proj.${def.id}`, def.label)));
     }
   }
 
   fill(
     root.querySelector('[data-bind="style.theme"]'),
-    Object.entries(THEMES).map(([id, t]) => [id, t.label])
+    Object.entries(THEMES).map(([id, theme]) => [id, tf(`theme.${id}`, theme.label)])
   );
   fill(
     root.querySelector('[data-bind="style.font"]'),
-    Object.entries(FONTS).map(([id, f]) => [id, f.label])
+    Object.entries(FONTS).map(([id, f]) => [id, tf(`font.${id}`, f.label)])
   );
   fill(
     root.querySelector('[data-bind="detail"]'),
-    DETAILS.map((d) => [d.id, `${d.label} · ${d.note}`])
+    DETAILS.map((d) => [d.id, `${tf(`detail.${d.id}`, d.label)} · ${d.note}`])
   );
   fill(
     root.querySelector('[data-bind="page.size"]'),
-    Object.keys(PAGE_SIZES).map((k) => [k, k === 'Custom' ? 'Custom size' : k])
+    Object.keys(PAGE_SIZES).map((k) => [
+      k,
+      k === 'Custom' ? t('page.custom') : k === 'Square' ? t('page.square') : k,
+    ])
   );
   fill(root.querySelector('[data-action="preset"]'), [
-    ['', 'Choose a starting point…'],
-    ...PRESETS.map((p) => [p.id, p.label]),
+    ['', t('field.presetPick')],
+    ...PRESETS.map((p) => [p.id, tf(`preset.${p.id}`, p.label)]),
   ]);
   fill(root.querySelector('[data-action="region"]'), [
-    ['', 'Jump to a region…'],
-    ...REGIONS.map((r) => [r.id, r.label]),
+    ['', t('field.regionPick')],
+    ...REGIONS.map((r) => [r.id, tf(`region.${r.id}`, r.label)]),
   ]);
+  const langSelect = root.querySelector('[data-action="language"]');
+  if (langSelect) {
+    fill(
+      langSelect,
+      LANGUAGES.map((l) => [l.id, l.label])
+    );
+    langSelect.value = language();
+  }
 
   // Logarithmic sliders run over a fixed 0…1000 track, set here so the markup
   // cannot disagree with readValue()/writeValue(). Without it the browser falls
@@ -137,7 +132,7 @@ export function buildControls(root) {
         input.type = 'color';
         input.dataset.bind = `style.${key}`;
         const name = document.createElement('span');
-        name.textContent = COLOUR_LABELS[key] || key;
+        name.textContent = t(`colour.${key}`);
         label.append(input, name);
         return label;
       })
@@ -151,8 +146,8 @@ function readValue(input, state) {
   if (input.dataset.scale === 'log') {
     const min = Number(input.dataset.min);
     const max = Number(input.dataset.max);
-    const t = Number(input.value) / LOG_TRACK;
-    return roundSignificant(Math.exp(Math.log(min) + t * (Math.log(max) - Math.log(min))), 3);
+    const frac = Number(input.value) / LOG_TRACK;
+    return roundSignificant(Math.exp(Math.log(min) + frac * (Math.log(max) - Math.log(min))), 3);
   }
   if (input.type === 'number' || input.type === 'range' || input.dataset.steps !== undefined) {
     const n = Number(input.value);

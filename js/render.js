@@ -18,6 +18,7 @@ import {
   dotsAlong,
 } from './geo.js';
 import {tokens, widths, fontFamily} from './style.js';
+import {t, tf} from './i18n.js';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
 
@@ -793,12 +794,14 @@ export function render(state, data = {}) {
   }
 
   if (state.title.credit) {
-    const parts = [def.label];
+    const parts = [tf(`proj.${def.id}`, def.label)];
     if (scale) parts.push(`1:${formatScale(scale.denominator)}`);
     if (state.view.mode === 'tilt') {
-      parts.push(`${Math.round(state.view.heightKm)} km above ground, tilt ${Math.round(state.view.tilt)}°`);
+      parts.push(
+        t('credit.height', {km: Math.round(state.view.heightKm), tilt: Math.round(state.view.tilt)})
+      );
     }
-    parts.push('Natural Earth data');
+    parts.push(t('credit.data'));
     const footY = num(H - margin * 0.35);
     const footSize = num(state.grid.labelSize * 0.8, 3);
     svg.appendChild(
