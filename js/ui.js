@@ -127,16 +127,18 @@ export function buildControls(root) {
     );
   }
 
+  // Swatch first, then the name: the row reads as the colour it sets.
   const colours = root.querySelector('#colours');
   if (colours) {
     colours.replaceChildren(
       ...COLOUR_KEYS.map((key) => {
         const label = document.createElement('label');
-        label.textContent = COLOUR_LABELS[key] || key;
         const input = document.createElement('input');
         input.type = 'color';
         input.dataset.bind = `style.${key}`;
-        label.appendChild(input);
+        const name = document.createElement('span');
+        name.textContent = COLOUR_LABELS[key] || key;
+        label.append(input, name);
         return label;
       })
     );

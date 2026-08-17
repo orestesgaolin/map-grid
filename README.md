@@ -39,10 +39,15 @@ through the projection and clipped, so they curve correctly in every frame.
 
 **Border marks.** Where a graticule line meets the neatline, the tool places a tick and a
 coordinate label (`45°30′ N`, `45.5° N` or `+45.5°`), and it can draw the classic chequered
-border band, alternating at the subdivision step. Lines that never reach the frame — a globe, a
-Robinson oval, a tilted view — are labelled on the map instead: at the open end of the line, or
-along a parallel or meridian inside the view. Labels that would overlap are dropped rather than
-piled up.
+border band, alternating at the subdivision step. The band is decided per edge, because it can
+only exist where the graticule actually reaches the frame: a section or a cylindrical world map
+gets all four edges, a Robinson oval gets top and bottom where its pole lines touch, and a globe
+gets none and falls back to ticks — the panel says so when it does.
+
+A line that never reaches the frame is labelled on the map instead: at the open end of the line,
+or along a parallel or meridian inside the view. A line whose frame label merely lost a collision
+with its neighbours is dropped, since thinning a crowded edge is normal and moving the label
+inside would print a second, jumbled row.
 
 **Frames.**
 
@@ -69,12 +74,16 @@ borders, populated places (filtered by population, capitals marked with a square
 outline, neatline, scale bar, title block and a footer with the projection, scale and data
 credit. Three levels of coastline detail: 110m, 50m and 10m.
 
-**Connect the dots.** A layer that replaces the coastline with evenly spaced dots, optionally
-numbered, one sequence per island — a connect-the-dots puzzle of any coast. The spacing slider is
-the quality control: closer dots follow the coast more faithfully, wider dots make an easier
-puzzle. Small islands can be dropped by setting how many dot spacings a coast must be worth to
-qualify. Where the frame cuts a coastline, the clipped edge along the frame is split out rather
-than dotted, so no row of dots marches down the neatline.
+**Connect the dots.** A layer that replaces the coastline — and the country borders, when that
+layer is on — with evenly spaced dots: a connect-the-dots puzzle of any coast. The spacing slider
+is the quality control: closer dots follow the coast more faithfully, wider dots make an easier
+puzzle. Each piece can be numbered, and by default each gets its own marker (dot, ring, square,
+hollow square, diamond, hollow diamond) so that neighbouring runs can be told apart without
+numbers. *Hide the lines the dots follow* suppresses the coast and border strokes, which is what
+turns the sheet into a puzzle rather than a traced outline. Small islands can be dropped by
+setting how many dot spacings a coast must be worth to qualify. Where the frame cuts a coastline,
+the clipped edge along the frame is split out rather than dotted, so no row of dots marches down
+the neatline.
 
 **Sea as a difference.** *Sea cut around land* (on by default) appends the coastline rings to the
 sea path and fills it with the even-odd rule, so the sea is one real outline with the land as
@@ -86,6 +95,10 @@ coastline geometry is still stored only once.
 **Page and style.** A5 to A2, Letter, Tabloid, square or a custom size in millimetres, either
 orientation, adjustable margin. Five colour themes (print, line art, atlas, blueprint, night),
 every colour editable, three type families, one line-weight control.
+
+**Footer.** An optional line under the map records the projection, the scale, the 3D height and
+the Natural Earth credit, with a site label on the right — `config.js` sets the default
+(`siteLabel`) and the field in *Page and style* overrides it per map.
 
 **Export.** SVG carries the page size in millimetres, so it prints at the size shown and stays
 editable in Illustrator or Inkscape — presentation attributes only, no stylesheet, no external
@@ -133,7 +146,7 @@ checks that land measures about 3.6 steradians. Without that, the three inverted
 
 ```
 index.html            markup and the whole control panel
-config.js             repository link and the analytics switch
+config.js             repository link, footer site label, analytics switch
 css/app.css           interface only; nothing inside the map SVG depends on it
 js/analytics.js       optional cookieless analytics, inert until configured
 js/state.js           defaults, dotted-path access, URL hash

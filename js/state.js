@@ -63,7 +63,15 @@ export function defaultState() {
       scalebar: false,
     },
     cities: {minPop: 5000000, max: 40, labels: true, capitalsOnly: false, dot: 1.1},
-    dots: {spacing: 6, size: 0.9, numbers: false, minIsland: 3, labelSize: 1.8},
+    dots: {
+      spacing: 6,
+      size: 0.9,
+      numbers: false,
+      varyStyle: true,
+      minIsland: 3,
+      labelSize: 1.8,
+      replaceLines: true,
+    },
     detail: '110m',
     style: {
       theme: 'print',
@@ -84,7 +92,13 @@ export function defaultState() {
       city: '#c0392b',
       cityText: '#2c333d',
     },
-    title: {show: false, text: '', subtitle: '', credit: true},
+    title: {
+      show: false,
+      text: '',
+      subtitle: '',
+      credit: true,
+      site: globalThis.MAPGRID?.siteLabel ?? 'roszkowski.dev/map-grid',
+    },
   };
 }
 

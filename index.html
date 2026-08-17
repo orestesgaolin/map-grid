@@ -51,8 +51,8 @@
           <div class="field">
             <label for="mode">Frame</label>
             <select id="mode" data-bind="view.mode">
-              <option value="world">Whole world / hemisphere</option>
-              <option value="section">Section (bounding box)</option>
+              <option value="world">Whole world or hemisphere</option>
+              <option value="section">Section (box)</option>
               <option value="tilt">3D tilted view</option>
             </select>
           </div>
@@ -195,8 +195,8 @@
             <div class="field">
               <label for="labels">Labels</label>
               <select id="labels" data-bind="grid.labels">
-                <option value="frame">On the frame or the line end</option>
-                <option value="inline">On the lines only</option>
+                <option value="frame">Frame or line end</option>
+                <option value="inline">On the lines</option>
                 <option value="both">Frame and lines</option>
                 <option value="none">None</option>
               </select>
@@ -218,11 +218,11 @@
 
           <div class="grid2">
             <div class="field">
-              <label for="frameStyle">Border</label>
+              <label for="frameStyle">Border <span class="hint" id="frame-hint"></span></label>
               <select id="frameStyle" data-bind="grid.frameStyle">
-                <option value="checker">Chequered band</option>
-                <option value="ticks">Tick marks</option>
-                <option value="plain">Plain line</option>
+                <option value="checker">Chequered</option>
+                <option value="ticks">Ticks</option>
+                <option value="plain">Plain</option>
               </select>
             </div>
             <div class="field">
@@ -238,6 +238,7 @@
               <input type="number" id="labelSize" min="1.2" max="8" step="0.1" data-bind="grid.labelSize" />
             </div>
           </div>
+          <button type="button" class="ghost" data-action="reset-grid">Reset grid settings</button>
         </details>
 
         <details open>
@@ -268,7 +269,7 @@
           <div class="box" data-show-truthy="layers.cities">
             <div class="field">
               <label for="minPop">Smallest city <span class="hint" id="pop-hint"></span></label>
-              <div class="pair">
+              <div class="pair wide">
                 <input type="range" data-bind="cities.minPop" data-scale="log" data-min="100000" data-max="40000000" />
                 <input type="number" id="minPop" min="0" max="40000000" step="10000" data-bind="cities.minPop" />
               </div>
@@ -307,13 +308,20 @@
                 <input type="number" id="dotMinIsland" min="0" max="20" step="0.5" data-bind="dots.minIsland" />
               </div>
             </div>
+            <label class="check">
+              <input type="checkbox" data-bind="dots.replaceLines" /> Hide the lines the dots follow
+            </label>
+            <label class="check">
+              <input type="checkbox" data-bind="dots.varyStyle" /> A different marker per piece
+            </label>
             <label class="check"><input type="checkbox" data-bind="dots.numbers" /> Number the dots</label>
             <div class="field" data-show-truthy="dots.numbers">
               <label for="dotLabelSize">Number size (mm)</label>
               <input type="number" id="dotLabelSize" min="0.8" max="6" step="0.1" data-bind="dots.labelSize" />
             </div>
             <p class="note">
-              Islands shorter than this many dot spacings are left out. Numbering restarts on every island.
+              Dots follow the coastline, and the country borders as well when that layer is on. Coasts shorter than
+              this many dot spacings are left out; numbering restarts on every piece.
             </p>
           </div>
         </details>
@@ -370,7 +378,13 @@
               <input type="text" id="subtitleText" data-bind="title.subtitle" placeholder="" />
             </div>
           </div>
-          <label class="check"><input type="checkbox" data-bind="title.credit" /> Footer line with projection, scale and data credit</label>
+          <label class="check">
+            <input type="checkbox" data-bind="title.credit" /> Footer with projection, scale and credit
+          </label>
+          <div class="field" data-show-truthy="title.credit">
+            <label for="siteLabel">Footer right side</label>
+            <input type="text" id="siteLabel" data-bind="title.site" placeholder="roszkowski.dev/map-grid" />
+          </div>
 
           <details class="sub">
             <summary>Individual colours</summary>
@@ -400,7 +414,7 @@
             <button type="button" data-action="svg">Export SVG</button>
           </div>
           <div class="buttons">
-            <button type="button" class="ghost" data-action="link">Copy link to this map</button>
+            <button type="button" class="ghost" data-action="link">Copy link</button>
             <button type="button" class="ghost" data-action="reset">Reset all</button>
           </div>
           <p class="note">

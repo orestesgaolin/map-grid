@@ -42,6 +42,32 @@ function num(v, digits = 2) {
 }
 
 /**
+ * Marker shapes for the connect-the-dots layer, cycled per piece of coast so
+ * that neighbouring runs of dots can be told apart when they are not numbered.
+ */
+const MARKERS = ['dot', 'ring', 'square', 'square-open', 'diamond', 'diamond-open'];
+
+function marker(shape, x, y, r, ink, paper, stroke) {
+  const open = {fill: paper, stroke: ink, 'stroke-width': num(stroke, 3)};
+  switch (shape) {
+    case 'ring':
+      return el('circle', {cx: num(x), cy: num(y), r: num(r, 3), ...open});
+    case 'square':
+      return el('rect', {x: num(x - r), y: num(y - r), width: num(r * 2, 3), height: num(r * 2, 3), fill: ink});
+    case 'square-open':
+      return el('rect', {x: num(x - r), y: num(y - r), width: num(r * 2, 3), height: num(r * 2, 3), ...open});
+    case 'diamond':
+    case 'diamond-open': {
+      const d = r * 1.3;
+      const path = `M${num(x)},${num(y - d)}L${num(x + d)},${num(y)}L${num(x)},${num(y + d)}L${num(x - d)},${num(y)}Z`;
+      return el('path', shape === 'diamond' ? {d: path, fill: ink} : {d: path, ...open});
+    }
+    default:
+      return el('circle', {cx: num(x), cy: num(y), r: num(r, 3), fill: ink});
+  }
+}
+
+/**
  * Renders the map.
  * @param {object} state  full application state
  * @param {object} data   layers from datasets.load()
@@ -187,7 +213,11 @@ export function render(state, data = {}) {
       'stroke-linejoin': 'round',
     });
   }
-  if (state.layers.borders && data.borders) {
+  // Dots can stand in for the lines they were sampled from, which is what makes
+  // a connect-the-dots sheet rather than a traced outline.
+  const dotsReplaceLines = state.layers.dots && state.dots.replaceLines;
+
+  if (state.layers.borders && !dotsReplaceLines && data.borders) {
     addPath(map, 'borders', data.borders, {
       fill: 'none',
       stroke: C.border,
@@ -196,7 +226,7 @@ export function render(state, data = {}) {
       'stroke-linejoin': 'round',
     });
   }
-  if (state.layers.coast && data.land) {
+  if (state.layers.coast && !dotsReplaceLines && data.land) {
     addPath(map, 'coast', data.land, {
       fill: 'none',
       stroke: C.coast,
@@ -243,13 +273,25 @@ export function render(state, data = {}) {
   // --- connect the dots ------------------------------------------------------
 
   let dotCount = null;
-  if (state.layers.dots && data.land) {
+  if (state.layers.dots && (data.land || data.borders)) {
     const spacing = Math.max(0.5, state.dots.spacing);
-    const dots = dotsAlong(trace(data.land), spacing, {
-      minLength: spacing * state.dots.minIsland,
-      border: rect,
-    });
-    dotCount = dots.total;
+    const minLength = spacing * state.dots.minIsland;
+    const dots = data.land
+      ? dotsAlong(trace(data.land), spacing, {minLength, border: rect})
+      : {rings: [], total: 0};
+    // Country borders get the same treatment when that layer is on, so the
+    // puzzle can be drawn on the outline of every country rather than the coast
+    // alone. They share the dot budget.
+    const borderDots =
+      state.layers.borders && data.borders
+        ? dotsAlong(trace(data.borders), spacing, {
+            minLength,
+            border: rect,
+            maxDots: Math.max(0, 5000 - dots.total),
+          })
+        : {rings: [], total: 0};
+    dotCount = dots.total + borderDots.total;
+    dots.rings = dots.rings.concat(borderDots.rings);
     const group = el('g', {id: 'dots', fill: C.coast, stroke: 'none'});
     const numbers = state.dots.numbers
       ? el('g', {
@@ -261,9 +303,13 @@ export function render(state, data = {}) {
         })
       : null;
     const r = Math.max(0.1, state.dots.size / 2);
+    const stroke = Math.max(0.1, r * 0.5);
+    let piece = 0;
     for (const ring of dots.rings) {
+      const shape = state.dots.varyStyle ? MARKERS[piece % MARKERS.length] : 'dot';
+      piece++;
       for (const dot of ring) {
-        group.appendChild(el('circle', {cx: num(dot.x), cy: num(dot.y), r: num(r, 3)}));
+        group.appendChild(marker(shape, dot.x, dot.y, r, C.coast, C.paper, stroke));
         if (numbers) {
           numbers.appendChild(
             text(String(dot.n), {
@@ -395,37 +441,47 @@ export function render(state, data = {}) {
 
   // --- frame -----------------------------------------------------------------
 
-  // A chequered band needs crossings to alternate on, along every edge. Curved
-  // frames — Robinson, a globe, a tilted view — have edges the graticule never
-  // reaches, so the border degrades to tick marks instead of turning into a
-  // solid black bar.
+  // A chequered band alternates at graticule crossings, so it can only exist on
+  // an edge the graticule actually meets. A section or a cylindrical world map
+  // has all four; a Robinson oval has only top and bottom, where the pole lines
+  // touch; a globe has none. Each edge is therefore banded on its own, and the
+  // style falls back to ticks only when no edge qualifies.
+  const EDGES = ['top', 'bottom', 'left', 'right'];
   const divisions = state.grid.minor ? ticks.major.concat(ticks.minor) : ticks.major;
-  const perEdge = (edge) => divisions.filter((t) => t.edge === edge).length;
-  const checkerOk = ['top', 'bottom', 'left', 'right'].every((edge) => perEdge(edge) >= 2);
-  const frameStyle = state.grid.frameStyle === 'checker' && !checkerOk ? 'ticks' : state.grid.frameStyle;
+  const cutsOn = (edge) => {
+    const horizontal = edge === 'top' || edge === 'bottom';
+    const from = horizontal ? rect.x0 : rect.y0;
+    const to = horizontal ? rect.x1 : rect.y1;
+    return divisions
+      .filter((t) => t.edge === edge)
+      .map((t) => (horizontal ? t.x : t.y))
+      .filter((v) => v > from + 1e-6 && v < to - 1e-6)
+      .sort((a, b) => a - b);
+  };
+  const cuts = Object.fromEntries(EDGES.map((edge) => [edge, cutsOn(edge)]));
+  const banded = Object.fromEntries(EDGES.map((edge) => [edge, cuts[edge].length >= 2]));
+  const anyBanded = EDGES.some((edge) => banded[edge]);
+  const frameStyle = state.grid.frameStyle === 'checker' && !anyBanded ? 'ticks' : state.grid.frameStyle;
 
   const bandWidth = frameStyle === 'checker' ? Math.max(0.4, state.grid.band) : 0;
+  const bandOn = (edge) => frameStyle === 'checker' && banded[edge];
   const outer = {
-    x0: rect.x0 - bandWidth,
-    y0: rect.y0 - bandWidth,
-    x1: rect.x1 + bandWidth,
-    y1: rect.y1 + bandWidth,
+    x0: rect.x0 - (bandOn('left') ? bandWidth : 0),
+    y0: rect.y0 - (bandOn('top') ? bandWidth : 0),
+    x1: rect.x1 + (bandOn('right') ? bandWidth : 0),
+    y1: rect.y1 + (bandOn('bottom') ? bandWidth : 0),
   };
 
   if (state.layers.frame) {
     const frame = el('g', {id: 'frame'});
     if (frameStyle === 'checker') {
       const band = el('g', {id: 'frame-band', stroke: 'none'});
-      for (const edge of ['top', 'bottom', 'left', 'right']) {
+      for (const edge of EDGES) {
+        if (!banded[edge]) continue;
         const horizontal = edge === 'top' || edge === 'bottom';
         const from = horizontal ? rect.x0 : rect.y0;
         const to = horizontal ? rect.x1 : rect.y1;
-        const cuts = divisions
-          .filter((t) => t.edge === edge)
-          .map((t) => (horizontal ? t.x : t.y))
-          .filter((v) => v > from + 1e-6 && v < to - 1e-6)
-          .sort((a, b) => a - b);
-        const stops = [from, ...cuts, to];
+        const stops = [from, ...cuts[edge], to];
         for (let i = 0; i < stops.length - 1; i++) {
           const a = stops[i];
           const b = stops[i + 1];
@@ -447,29 +503,49 @@ export function render(state, data = {}) {
           band.appendChild(el('rect', {...attrs, fill}));
         }
       }
-      // Corner squares, so the band closes cleanly.
-      for (const [cx, cy] of [
-        [outer.x0, outer.y0],
-        [rect.x1, outer.y0],
-        [outer.x0, rect.y1],
-        [rect.x1, rect.y1],
+      // Corner squares, where two banded edges meet.
+      for (const [x, y, a, b] of [
+        [outer.x0, outer.y0, 'left', 'top'],
+        [rect.x1, outer.y0, 'right', 'top'],
+        [outer.x0, rect.y1, 'left', 'bottom'],
+        [rect.x1, rect.y1, 'right', 'bottom'],
       ]) {
+        if (!banded[a] || !banded[b]) continue;
         band.appendChild(
-          el('rect', {x: num(cx), y: num(cy), width: num(bandWidth), height: num(bandWidth), fill: C.frame})
+          el('rect', {x: num(x), y: num(y), width: num(bandWidth), height: num(bandWidth), fill: C.frame})
         );
       }
       frame.appendChild(band);
-      frame.appendChild(
-        el('rect', {
-          x: num(outer.x0),
-          y: num(outer.y0),
-          width: num(outer.x1 - outer.x0),
-          height: num(outer.y1 - outer.y0),
-          fill: 'none',
-          stroke: C.frame,
-          'stroke-width': num(w.frame, 3),
-        })
-      );
+
+      // Outline around each banded strip, so a partly banded frame still closes.
+      for (const edge of EDGES) {
+        if (!banded[edge]) continue;
+        const horizontal = edge === 'top' || edge === 'bottom';
+        const box = horizontal
+          ? {
+              x: banded.left ? outer.x0 : rect.x0,
+              y: edge === 'top' ? outer.y0 : rect.y1,
+              width: (banded.right ? outer.x1 : rect.x1) - (banded.left ? outer.x0 : rect.x0),
+              height: bandWidth,
+            }
+          : {
+              x: edge === 'left' ? outer.x0 : rect.x1,
+              y: banded.top ? outer.y0 : rect.y0,
+              width: bandWidth,
+              height: (banded.bottom ? outer.y1 : rect.y1) - (banded.top ? outer.y0 : rect.y0),
+            };
+        frame.appendChild(
+          el('rect', {
+            x: num(box.x),
+            y: num(box.y),
+            width: num(box.width),
+            height: num(box.height),
+            fill: 'none',
+            stroke: C.frame,
+            'stroke-width': num(w.frame, 3),
+          })
+        );
+      }
       frame.appendChild(
         el('rect', {
           x: num(rect.x0),
@@ -478,7 +554,7 @@ export function render(state, data = {}) {
           height: num(rect.y1 - rect.y0),
           fill: 'none',
           stroke: C.frame,
-          'stroke-width': num(w.frameInner, 3),
+          'stroke-width': num(anyBanded && EDGES.every((e) => banded[e]) ? w.frameInner : w.frame, 3),
         })
       );
     } else {
@@ -524,9 +600,9 @@ export function render(state, data = {}) {
 
   if (state.grid.labels === 'frame' || state.grid.labels === 'both') {
     const size = state.grid.labelSize;
-    const off =
-      (frameStyle === 'checker' ? bandWidth : frameStyle === 'ticks' ? state.grid.tick : 0) +
-      state.grid.labelGap;
+    // Per edge, because only some edges may carry a band.
+    const offOn = (edge) =>
+      (bandOn(edge) ? bandWidth : frameStyle === 'ticks' ? state.grid.tick : 0) + state.grid.labelGap;
     const group = el('g', {
       id: 'graticule-labels',
       'font-family': family,
@@ -542,11 +618,24 @@ export function render(state, data = {}) {
     );
     const labelled = new Set();
     const key = (axis, value) => `${axis}:${value.toFixed(6)}`;
+    const ticksByLine = new Map();
+    for (const t of ticks.major) {
+      const k = key(t.axis, t.value);
+      if (!ticksByLine.has(k)) ticksByLine.set(k, []);
+      ticksByLine.get(k).push(t);
+    }
+    // Only a pole that projects to a single point makes meridian labels collide
+    // there. Robinson, Miller and the like map each pole to a line, so their
+    // meridians can be labelled at their own ends.
+    const poles = [90, -90].map((lat) => convergencePoint(lat, projection, centre, clipAngle)).filter(Boolean);
+    const atConvergence = (t) => poles.some((p) => Math.hypot(p[0] - t.x, p[1] - t.y) < 2);
+
     for (const t of ordered) {
       const label = formatCoord(t.value, t.axis, state.grid.format, state.grid.hemisphere);
       let x;
       let y;
       let anchor;
+      const off = offOn(t.edge);
       if (t.edge === 'top') [x, y, anchor] = [t.x, rect.y0 - off, 'middle'];
       else if (t.edge === 'bottom') [x, y, anchor] = [t.x, rect.y1 + off + size * 0.8, 'middle'];
       else if (t.edge === 'left') [x, y, anchor] = [rect.x0 - off, t.y + size * 0.35, 'end'];
@@ -557,18 +646,19 @@ export function render(state, data = {}) {
     }
     svg.appendChild(group);
 
-    // Lines with no label yet — they never reached the frame (a globe, a
-    // Robinson oval, a tilted view), or all their crossings landed on the same
-    // spot, as the meridians of a Mollweide do at its pole. They are labelled on
-    // the map instead: at the open end of the line where that end is clear of
-    // the poles, otherwise where the line crosses a parallel or meridian well
-    // inside the view.
-    const missing = traced.major.filter((m) => !labelled.has(key(m.line.axis, m.line.value)));
+    // Lines still unlabelled fall back to a label on the map — but only when the
+    // frame gave them nowhere to go: either they never reached it (a globe, a
+    // tilted view) or all their crossings piled onto one point, as the meridians
+    // of a Mollweide do at its pole. A label that merely lost a collision with
+    // its neighbours is dropped instead; thinning a crowded edge is normal, and
+    // moving it inside the map would print a second, jumbled row of labels.
+    const missing = traced.major.filter((m) => {
+      const k = key(m.line.axis, m.line.value);
+      if (labelled.has(k)) return false;
+      const own = ticksByLine.get(k);
+      return !own || own.every(atConvergence);
+    });
     if (missing.length) {
-      // Only a pole that projects to a single point makes meridian labels
-      // collide there. Robinson, Miller and the like map each pole to a line,
-      // so their meridians can be labelled at their own ends.
-      const poles = [90, -90].map((lat) => convergencePoint(lat, projection, centre, clipAngle)).filter(Boolean);
       const inner = el('g', {
         id: 'graticule-labels-outline',
         'font-family': family,
@@ -709,16 +799,31 @@ export function render(state, data = {}) {
       parts.push(`${Math.round(state.view.heightKm)} km above ground, tilt ${Math.round(state.view.tilt)}°`);
     }
     parts.push('Natural Earth data');
+    const footY = num(H - margin * 0.35);
+    const footSize = num(state.grid.labelSize * 0.8, 3);
     svg.appendChild(
       text(parts.join(' · '), {
         x: num(pageRect.x0),
-        y: num(H - margin * 0.35),
+        y: footY,
         'font-family': family,
-        'font-size': num(state.grid.labelSize * 0.8, 3),
+        'font-size': footSize,
         fill: C.text,
         'fill-opacity': 0.75,
       })
     );
+    if (state.title.site) {
+      svg.appendChild(
+        text(state.title.site, {
+          x: num(pageRect.x1),
+          y: footY,
+          'text-anchor': 'end',
+          'font-family': family,
+          'font-size': footSize,
+          fill: C.text,
+          'fill-opacity': 0.75,
+        })
+      );
+    }
   }
 
   const view = {projection, rect, page: {width: W, height: H}};
@@ -735,6 +840,8 @@ export function render(state, data = {}) {
       scale,
       ticks: ticks.major.length,
       dots: dotCount,
+      frameStyle,
+      frameStyleAsked: state.grid.frameStyle,
       horizonKm: state.view.mode === 'tilt' ? horizonRadiusKm(state.view.heightKm) : null,
     },
   };

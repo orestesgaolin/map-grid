@@ -125,6 +125,12 @@ function updateHints() {
     const km = Math.round(Math.min(shown, horizon)).toLocaleString('en-US');
     heightHint.textContent = `${km} km to the edge`;
   }
+  const frameHint = document.getElementById('frame-hint');
+  if (frameHint) {
+    // Say so when the chequered band cannot be drawn on this frame.
+    const fell = currentInfo?.frameStyleAsked === 'checker' && currentInfo?.frameStyle !== 'checker';
+    frameHint.textContent = fell ? 'no graticule on the frame here — using ticks' : '';
+  }
   const popHint = document.getElementById('pop-hint');
   if (popHint) popHint.textContent = `${Math.round(state.cities.minPop).toLocaleString('en-US')} people`;
 }
@@ -366,6 +372,11 @@ async function onAction(name, value, element) {
     case 'theme':
       merge(state.style, themeColours(state.style.theme));
       schedule();
+      break;
+    case 'reset-grid':
+      merge(state.grid, defaultState().grid);
+      schedule();
+      toast('grid reset');
       break;
     case 'recentre':
       state.view.zoom = 1;

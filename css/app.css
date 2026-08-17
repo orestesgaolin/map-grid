@@ -112,16 +112,25 @@ body {
   border-color: var(--accent);
 }
 
+/* One gutter for the whole panel section, so that direct children and anything
+   nested in a .grid2 or .box line up on the same edges. */
 details {
+  --gutter: 11px;
   border: 1px solid var(--line);
   border-radius: 6px;
   margin-bottom: 10px;
   background: var(--panel-2);
+  padding: 0 var(--gutter);
+}
+
+details[open] {
+  padding-bottom: var(--gutter);
 }
 
 details > summary {
   cursor: pointer;
-  padding: 8px 10px;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 8px var(--gutter);
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -145,18 +154,19 @@ details[open] > summary::before {
   content: "▾";
 }
 
-details > *:not(summary) {
-  margin-left: 10px;
-  margin-right: 10px;
-}
-
-details > *:last-child {
-  margin-bottom: 10px;
-}
-
 details.sub {
   margin: 8px 0 0;
+  padding: 0;
   background: transparent;
+}
+
+details.sub > summary {
+  margin: 0;
+  padding: 6px 0;
+}
+
+details.sub[open] {
+  padding-bottom: 0;
 }
 
 .field {
@@ -174,10 +184,17 @@ details.sub {
 .check {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   margin: 5px 0;
   color: var(--ink);
   cursor: pointer;
+}
+
+/* Browsers give checkboxes their own margin, which would push every checkbox
+   row off the edge that the selects and number fields sit on. */
+.check input[type="checkbox"] {
+  margin: 0;
+  flex: none;
 }
 
 .checks {
@@ -195,8 +212,8 @@ details.sub {
 .box {
   border: 1px dashed var(--line);
   border-radius: 5px;
-  padding: 4px 8px 8px;
-  margin: 8px 0;
+  padding: 2px 9px 9px;
+  margin: 9px 0;
 }
 
 .hint {
@@ -238,9 +255,14 @@ input[type="range"] {
 
 .pair {
   display: grid;
-  grid-template-columns: 1fr 62px;
+  grid-template-columns: 1fr 74px;
   gap: 6px;
   align-items: center;
+}
+
+/* Populations run to eight digits and were being cut off at 62px. */
+.pair.wide {
+  grid-template-columns: 1fr 92px;
 }
 
 .buttons {
@@ -286,26 +308,57 @@ button:hover {
 .colours {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 8px;
+  gap: 5px 10px;
   margin-top: 6px;
 }
 
 .colours label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  gap: 7px;
   font-size: 11px;
   color: var(--ink-dim);
+  cursor: pointer;
+  min-width: 0;
 }
 
+.colours label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colours label:hover {
+  color: var(--ink);
+}
+
+/* A plain rectangle filled with the colour it holds, rather than the browser's
+   default well with its own padding and border. */
 .colours input[type="color"] {
-  width: 34px;
-  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 26px;
+  height: 15px;
+  flex: none;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: 2px;
   background: none;
+  cursor: pointer;
+}
+
+.colours input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.colours input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 1px;
+}
+
+.colours input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 1px;
 }
 
 /* --- stage ---------------------------------------------------------------- */

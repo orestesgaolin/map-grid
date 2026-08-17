@@ -3,7 +3,7 @@
 
 export const THEMES = {
   print: {
-    label: 'Print (light)',
+    label: 'Print',
     paper: '#ffffff',
     ocean: '#eef3f7',
     land: '#f6f3ec',
@@ -20,7 +20,7 @@ export const THEMES = {
     cityText: '#2c333d',
   },
   mono: {
-    label: 'Line art (black on white)',
+    label: 'Line art',
     paper: '#ffffff',
     ocean: '#ffffff',
     land: '#ffffff',

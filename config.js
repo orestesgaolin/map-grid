@@ -15,6 +15,10 @@
 window.MAPGRID = {
   repo: 'https://github.com/orestesgaolin/map-grid',
 
+  // Printed at the right of the footer line on every map, and in exports.
+  // Set to '' to leave it out.
+  siteLabel: 'roszkowski.dev/map-grid',
+
   analytics: {
     provider: 'none', // 'goatcounter' | 'plausible' | 'umami' | 'none'
     site: '',
